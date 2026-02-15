@@ -1,0 +1,45 @@
+services:
+  db_cg_pro:
+    image: mariadb:10.11
+    restart: always
+    volumes:
+      - db_data_cg_pro:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=test
+      - MYSQL_DATABASE=cg_pro
+      - MYSQL_USER=test
+      - MYSQL_PASSWORD=test
+
+  wordpress:
+    image: wordpress:latest
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      - WORDPRESS_DB_HOST=db_cg_pro
+      - WORDPRESS_DB_USER=test
+      - WORDPRESS_DB_PASSWORD=test
+      - WORDPRESS_DB_NAME=cg_pro
+      # MailHog Konfiguration (SMTP)
+      - WORDPRESS_CONFIG_EXTRA=define('WP_MAIL_IS_SMTP', true); define('WP_MAIL_SMTP_HOST', 'mailhog'); define('WP_MAIL_SMTP_PORT', 1025);
+    volumes:
+      - ./src:/var/www/html
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    ports:
+      - 8081:80
+    environment:
+      - PMA_HOST=db_cg_pro
+      - MYSQL_ROOT_PASSWORD=test
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: always
+    ports:
+      - 8025:8025 # Web-Interface
+      - 1025:1025 # SMTP-Port
+
+volumes:
+  db_data_cg_pro:
