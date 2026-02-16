@@ -1,12 +1,12 @@
 services:
-  db_cg_pro:
+  db_ws_forms:
     image: mariadb:10.11
     restart: always
     volumes:
-      - db_data_cg_pro:/var/lib/mysql
+      - db_data_ws_forms:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=test
-      - MYSQL_DATABASE=cg_pro
+      - MYSQL_DATABASE=ws_forms
       - MYSQL_USER=test
       - MYSQL_PASSWORD=test
 
@@ -16,10 +16,10 @@ services:
     ports:
       - 8080:80
     environment:
-      - WORDPRESS_DB_HOST=db_cg_pro
+      - WORDPRESS_DB_HOST=db_ws_forms
       - WORDPRESS_DB_USER=test
       - WORDPRESS_DB_PASSWORD=test
-      - WORDPRESS_DB_NAME=cg_pro
+      - WORDPRESS_DB_NAME=ws_forms
       # MailHog Konfiguration (SMTP)
       - WORDPRESS_CONFIG_EXTRA=define('WP_MAIL_IS_SMTP', true); define('WP_MAIL_SMTP_HOST', 'mailhog'); define('WP_MAIL_SMTP_PORT', 1025);
     volumes:
@@ -31,7 +31,7 @@ services:
     ports:
       - 8081:80
     environment:
-      - PMA_HOST=db_cg_pro
+      - PMA_HOST=db_ws_forms
       - MYSQL_ROOT_PASSWORD=test
 
   mailhog:
@@ -42,4 +42,4 @@ services:
       - 1025:1025 # SMTP-Port
 
 volumes:
-  db_data_cg_pro:
+  db_data_ws_forms:
