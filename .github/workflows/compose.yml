@@ -1,0 +1,21 @@
+name: Compose validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare local configuration
+        run: cp .env.example .env
+      - name: Validate Compose model
+        run: docker compose config --quiet
+      - name: Parse must-use plugin
+        run: php -l mu-plugins/local-mailpit.php

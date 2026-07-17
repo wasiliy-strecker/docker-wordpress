@@ -1,45 +1,84 @@
+name: wordpress-dev
+
 services:
-  db_ws_forms:
-    image: mariadb:10.11
-    restart: always
-    volumes:
-      - db_data_ws_forms:/var/lib/mysql
+  database:
+    image: mariadb:12.3.2
+    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=test
-      - MYSQL_DATABASE=ws_forms
-      - MYSQL_USER=test
-      - MYSQL_PASSWORD=test
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - database_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - backend
 
   wordpress:
-    image: wordpress:latest
-    restart: always
+    image: wordpress:7.0.0-php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
     ports:
-      - 8080:80
+      - "127.0.0.1:${WORDPRESS_PORT}:80"
     environment:
-      - WORDPRESS_DB_HOST=db_ws_forms
-      - WORDPRESS_DB_USER=test
-      - WORDPRESS_DB_PASSWORD=test
-      - WORDPRESS_DB_NAME=ws_forms
-      # MailHog Konfiguration (SMTP)
-      - WORDPRESS_CONFIG_EXTRA=define('WP_MAIL_IS_SMTP', true); define('WP_MAIL_SMTP_HOST', 'mailhog'); define('WP_MAIL_SMTP_PORT', 1025);
+      WORDPRESS_DB_HOST: database:3306
+      WORDPRESS_DB_NAME: ${DB_NAME}
+      WORDPRESS_DB_USER: ${DB_USER}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-1}
+      WORDPRESS_SMTP_HOST: mailpit
+      WORDPRESS_SMTP_PORT: 1025
     volumes:
-      - ./src:/var/www/html
+      - wordpress_data:/var/www/html
+      - ./plugins:/var/www/html/wp-content/plugins/local-development
+      - ./mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+    networks:
+      - backend
 
   phpmyadmin:
-    image: phpmyadmin:latest
-    restart: always
+    image: phpmyadmin:5.2.3-apache
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
     ports:
-      - 8081:80
+      - "127.0.0.1:${PHPMYADMIN_PORT}:80"
     environment:
-      - PMA_HOST=db_ws_forms
-      - MYSQL_ROOT_PASSWORD=test
+      PMA_HOST: database
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    networks:
+      - backend
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    restart: always
+  mailpit:
+    image: axllent/mailpit:v1.30.0
+    restart: unless-stopped
     ports:
-      - 8025:8025 # Web-Interface
-      - 1025:1025 # SMTP-Port
+      - "127.0.0.1:${MAILPIT_UI_PORT}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT}:1025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit_data:/data
+    networks:
+      - backend
 
 volumes:
-  db_data_ws_forms:
+  database_data:
+  wordpress_data:
+  mailpit_data:
+
+networks:
+  backend:
+    driver: bridge
